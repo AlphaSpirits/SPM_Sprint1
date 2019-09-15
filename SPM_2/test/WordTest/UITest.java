@@ -49,7 +49,7 @@ public class UITest {
     public void testCalcCnc() {
         System.out.println("Test of calcCnc method");
         UI instance = new UI();
-        ArrayList<Integer> expCnc = new ArrayList<Integer>(Arrays.asList(0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0));
+        ArrayList<Integer> expCnc = new ArrayList<Integer>(Arrays.asList(0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0));
         ArrayList<Integer> CncResult = instance.calcCnc();
         assertEquals(expCnc, CncResult);
     }

@@ -1,5 +1,6 @@
 package WordTest;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
@@ -13,6 +14,12 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import javax.swing.table.DefaultTableModel;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartFrame;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 public class UI extends javax.swing.JFrame {
 
@@ -43,7 +50,267 @@ public class UI extends javax.swing.JFrame {
 
     }
 
+    public ArrayList<String> readFile() {
+        int lineNo = 0;
+        Scanner fileInput = new Scanner(uploadedContent.getText());
+        // Read through file and find words
+        while (fileInput.hasNextLine()) {
+            lineNo = lineNo + 1;
+            String scannedline = fileInput.nextLine();
+            programStatement.add(scannedline);
+            lineNumber.add(lineNo);
+        }
+        return programStatement;
+    }
+
+    public void viewResult() {
+        readFile();
+        DefaultTableModel model = (DefaultTableModel) result.getModel();
+        Object[] CtcObjs = Ctc.toArray();
+        Object[] CncObjs = Cnc.toArray();
+        Object[] programStatementObjs = programStatement.toArray();
+        Object[] lineNumberObjs = lineNumber.toArray();
+        Object[] lineComplexityObjs = lineComplexity.toArray();
+        Object[] TwObjs = Tw.toArray();
+        Object[] CpsObjs = Cps.toArray();
+        Object[] CrObjs = Cr.toArray();
+        Object[] CiObjs = Ci.toArray();
+
+        model.addColumn("Line No", lineNumberObjs);
+        model.addColumn("Program Statements", programStatementObjs);
+        model.addColumn("Cs", lineComplexityObjs);
+        model.addColumn("Ctc", CtcObjs);
+        model.addColumn("Cnc", CncObjs);
+        model.addColumn("Ci", CiObjs);
+        model.addColumn("Tw", TwObjs);
+        model.addColumn("Cps", CpsObjs);
+        if (recursion == 1) {
+            System.out.println("recursion is " + recursion);
+            model.addColumn("Cr", CrObjs);
+        }
+
+    }
+
+    public ArrayList<Integer> inheritanceCi() {
+
+        int complexity = 0;
+        String fileInput = uploadedContent.getText(); //read the txt document
+        String keywords[] = {"abstract", "assert", "boolean", "break", "byte", "case", "catch", "char",
+            "const", "continue", "default", "do", "double", "enum", "final",
+            "finally", "float", "for", "goto", "if", "instanceof", "int", "interface",
+            "native", "new", "package", "short", "strictfp", "super",
+            "switch", "synchronized", "this", "transient",
+            "volatile", "while", "FileReader"};
+        String ExceptionsSelection[] = {
+            "ArithmeticException", "ArrayIndexOutOfBoundsException", "ClassNotFoundException", "FileNotFoundException", "IOException",
+            "InterruptedException", "NoSuchFieldException", "NoSuchMethodException", "NullPointerException", "NumberFormatException",
+            "RuntimeException", "StringIndexOutOfBoundsException"
+        };
+
+        String[] line = fileInput.split("\r\n|\r|\n");
+
+        for (int i = 0; i < line.length; i++) {
+
+            String withoutspace = line[i].trim();
+            if (withoutspace.startsWith("/") || withoutspace.startsWith("*")) {//set lines with comments to 0 Cs
+                complexity = complexity;
+                System.out.println(complexity + " " + line[i]);
+            }
+            if (withoutspace.startsWith("import")) {
+
+                complexity = complexity;
+                System.out.println(complexity + " " + line[i]);
+            }
+
+            if (withoutspace.startsWith("try") || withoutspace.startsWith("else")) {
+
+                complexity = 0;
+                System.out.println(complexity + " " + line[i]);
+            } else {
+                String[] words = line[i].split("\\s+");
+                for (int r = 0; r < words.length; r++) {
+
+                    if (words[r].contains("public") && words[r + 1].contains("class")) {
+                        complexity = complexity + 2;
+                        System.out.println(complexity + " " + line[i]);
+
+                        if (words[r].contains("extends") || words[r].contains("implements")) {
+                            if (words[i].contains(",")) {
+                                complexity = complexity + 1;
+                                System.out.println(complexity + " " + line[i]);
+                            }
+                            complexity = complexity + 1;
+                            System.out.println(complexity + " " + line[i]);
+                        }
+
+                    }
+
+                    if (words[r].contains("}")) {
+
+                        complexity = complexity;
+                        System.out.println(complexity + " " + line[i]);
+
+                    }
+                    if (words[r].contains("System")) {// System and out selection complexity
+                        complexity = complexity + 2;
+                        System.out.println(complexity + " " + line[i]);
+                    }
+                    if (words[r].equals("static") && words[r + 1].equals("void")) {
+                        complexity = complexity + 2;
+                        System.out.println(complexity + " " + line[i]);
+                    }
+
+                    if (words[r].contains("return")) {
+                        complexity = complexity + 2;
+                        System.out.println(complexity + " " + line[i]);
+                    }
+                    if (words[r].contains("throw")) {//if throw e
+                        if (words[r + 1].startsWith("e") && words[r + 1].endsWith(";")) {
+                            complexity = complexity + 2;
+                            System.out.println(complexity + " " + line[i]);
+                        }
+                        if (words[r].contains("//")) {
+                            complexity = complexity + 2;
+                            System.out.println(complexity + " " + line[i]);
+                        }
+                    }
+                    for (int u = 0; u < keywords.length; u++) {
+
+                        if (words[r].equals(keywords[u])) {
+                            complexity = complexity + 2;
+                            r++;
+                            System.out.println(complexity + " " + line[i]);
+                        }
+
+                    }
+
+                }
+
+            }
+            Ci.add(complexity);
+            complexity = 0;
+        }
+
+        return Ci;
+    }
+
+    public void generateCtcChart() {
+
+        DefaultCategoryDataset pieDataset = new DefaultCategoryDataset();
+
+        for (int i = 0; i < Ctc.size(); i++) {
+            pieDataset.setValue(Ctc.get(i), "Ctc Complexity", String.valueOf(i + 1));
+            System.out.println(Ctc.get(i));
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart("Ctc Statistics", "Line Number", "Ctc Complexity", pieDataset, PlotOrientation.VERTICAL, false, true, false);
+
+        CategoryPlot P = chart.getCategoryPlot();
+        P.setRangeGridlinePaint(Color.black);
+        ChartFrame frame = new ChartFrame("Ctc Statistics", chart);
+        frame.setVisible(true);
+        frame.setSize(450, 350);
+
+    }
+
+    public void generateCncChart() {
+
+        DefaultCategoryDataset pieDataset = new DefaultCategoryDataset();
+
+        for (int i = 0; i < Cnc.size(); i++) {
+            pieDataset.setValue(Cnc.get(i), "Cnc Complexity", String.valueOf(i + 1));
+            System.out.println(Cnc.get(i));
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart("Cnc Statistics", "Line Number", "Cnc Complexity", pieDataset, PlotOrientation.VERTICAL, false, true, false);
+
+        CategoryPlot P = chart.getCategoryPlot();
+        P.setRangeGridlinePaint(Color.black);
+        ChartFrame frame = new ChartFrame("Cnc Statistics", chart);
+        frame.setVisible(true);
+        frame.setSize(450, 350);
+
+    }
+
+    public void generateCsChart() {
+
+        DefaultCategoryDataset pieDataset = new DefaultCategoryDataset();
+
+        for (int i = 0; i < lineComplexity.size(); i++) {
+            pieDataset.setValue(lineComplexity.get(i), "Cs Complexity", String.valueOf(i + 1));
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart("Csc Statistics", "Line Number", "Csc Complexity", pieDataset, PlotOrientation.VERTICAL, false, true, false);
+
+        CategoryPlot P = chart.getCategoryPlot();
+        P.setRangeGridlinePaint(Color.black);
+        ChartFrame frame = new ChartFrame("Csc Statistics", chart);
+        frame.setVisible(true);
+        frame.setSize(450, 350);
+
+    }
+    
+    
+    
+    public void generateCiChart() {
+
+        DefaultCategoryDataset pieDataset = new DefaultCategoryDataset();
+
+        for (int i = 0; i < Ci.size(); i++) {
+            pieDataset.setValue(Ci.get(i), "Ci Complexity", String.valueOf(i + 1));
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart("Ci Statistics", "Line Number", "Ci Complexity", pieDataset, PlotOrientation.VERTICAL, false, true, false);
+
+        CategoryPlot P = chart.getCategoryPlot();
+        P.setRangeGridlinePaint(Color.black);
+        ChartFrame frame = new ChartFrame("Ci Statistics", chart);
+        frame.setVisible(true);
+        frame.setSize(450, 350);
+
+    }
+    
+    public void generateTwChart() {
+
+        DefaultCategoryDataset pieDataset = new DefaultCategoryDataset();
+
+        for (int i = 0; i < Tw.size(); i++) {
+            pieDataset.setValue(Tw.get(i), "TW Complexity", String.valueOf(i + 1));
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart("TW Statistics", "Line Number", "TW Complexity", pieDataset, PlotOrientation.VERTICAL, false, true, false);
+
+        CategoryPlot P = chart.getCategoryPlot();
+        P.setRangeGridlinePaint(Color.black);
+        ChartFrame frame = new ChartFrame("TW Statistics", chart);
+        frame.setVisible(true);
+        frame.setSize(450, 350);
+
+    }
+    
+    public void generateCrChart() {
+
+        DefaultCategoryDataset pieDataset = new DefaultCategoryDataset();
+
+        for (int i = 0; i < Cr.size(); i++) {
+            pieDataset.setValue(Cr.get(i), "Cr Complexity", String.valueOf(i + 1));
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart("Cr Statistics", "Line Number", "Cr Complexity", pieDataset, PlotOrientation.VERTICAL, false, true, false);
+
+        CategoryPlot P = chart.getCategoryPlot();
+        P.setRangeGridlinePaint(Color.black);
+        ChartFrame frame = new ChartFrame("Cr Statistics", chart);
+        frame.setVisible(true);
+        frame.setSize(450, 350);
+
+    }
+    
+    
+    
+
     public int getSwitchCaseCount() {
+        maxCases = 0;
 
         int current_maxCases = 0;
         Scanner fileInput = new Scanner(uploadedContent.getText());
@@ -57,6 +324,7 @@ public class UI extends javax.swing.JFrame {
                 // System.out.println(scannedline);
                 if (current_maxCases > maxCases) {
                     maxCases = current_maxCases;
+
                 }
             } else if (scannedline.matches("(\\s+)case(.*)")) {
                 if (current_maxCases > 0) {
@@ -64,6 +332,7 @@ public class UI extends javax.swing.JFrame {
                     System.out.println(scannedline);
                 }
             }
+
         }
 
         return maxCases;
@@ -71,6 +340,7 @@ public class UI extends javax.swing.JFrame {
     }
 
     public ArrayList<Integer> calculateCtc() {
+        maxCases = 0;
         int CtcCounter = 0;
         int lineNumber = 0;
         int caseCount = 0;
@@ -148,7 +418,7 @@ public class UI extends javax.swing.JFrame {
             } //******************************IF uploded source code in C++ language
             else if (btnc.isSelected()) {
 
-            if (scannedline.contains("cout <<") || scannedline.startsWith("(\\s+)\\(.*)") || scannedline.startsWith("(\\s+)//(.*)") || (scannedline.startsWith("(\\s+)/*(.*)")) || scannedline.startsWith("(\\s+)*/(.*)")) {
+                if (scannedline.contains("cout <<") || scannedline.startsWith("(\\s+)\\(.*)") || scannedline.startsWith("(\\s+)//(.*)") || (scannedline.startsWith("(\\s+)/*(.*)")) || scannedline.startsWith("(\\s+)*/(.*)")) {
 
                     CtcCounter = 0;
                     //continue;
@@ -210,6 +480,7 @@ public class UI extends javax.swing.JFrame {
             }
         }
 
+        maxCases = 0;
         noOfLines.setText("No of Lines : " + lineNumber);
 
         return Ctc;
@@ -299,9 +570,8 @@ public class UI extends javax.swing.JFrame {
         return ArrCtc;
     }
 
-    
-    public ArrayList<Integer> calculateCs(){//for testing
-        
+    public ArrayList<Integer> calculateCs() {//for testing
+
         String testContentCs = "public class FibonacciMain {\n"
                 + "public static long fibonacci(long number) {\n"
                 + "        if ((number == 0) || (number == 1)) { // base cases\n"
@@ -318,8 +588,8 @@ public class UI extends javax.swing.JFrame {
                 + "        }\n"
                 + "    }\n"
                 + "}";
-        
-       String[] line = testContentCs.split("\r\n|\r|\n");
+
+        String[] line = testContentCs.split("\r\n|\r|\n");
 
         ArrayList<String> variableList = new ArrayList<String>();
         ArrayList<String> arrayToStoreBrackets = new ArrayList<String>();
@@ -515,14 +785,13 @@ public class UI extends javax.swing.JFrame {
             countComplexity = 0;
         }
         return (lineComplexity);
-    
+
     }
 
-    
-    
     public ArrayList<Integer> calculateCnc() {
 
         int current_max = 0; // current count  
+        int additonal = 0;
         int CncCounter = 0; // overall maximum count
         int lineNumber = 0;
         Scanner fileInput = new Scanner(uploadedContent.getText());
@@ -532,37 +801,88 @@ public class UI extends javax.swing.JFrame {
             lineNumber = lineNumber + 1;
             String scannedline = fileInput.nextLine();
 
+            if (scannedline.contains("//") || scannedline.contains("/*") || scannedline.contains("*/")) {
+                CncCounter = 0;
+
+            }
+
             //******************************IF uploded source code in JAVA language
             if (btnjava.isSelected()) {
-                if (scannedline.matches("(\\s+)if(.*)") || scannedline.matches("(\\s+)else(.*)") || scannedline.matches("(\\s+)for(.*)")|| scannedline.matches("(\\s+)while(.*)")) {
-                    current_max++;
-                    ////////System.out.println(scannedline);
-                    // update max if required  
-                    if (current_max > CncCounter) {
-                        CncCounter = current_max;
-                    }
-                } else if (scannedline.contains("}")) {
-                    if (current_max > 0) {
-                        current_max--;
-                        CncCounter = current_max;
+
+                String scannedlineTrimmed = scannedline.trim(); //remove white spaces first occured
+                String[] scannedlineArr = scannedline.split(" ");
+
+                //find cnc
+                for (int i = 0; i < scannedlineArr.length; i++) {
+                    System.out.println(scannedlineArr[i]);
+
+                    if (scannedlineArr[i].equals("if") || scannedlineArr[i].equals("else") || scannedlineArr[i].equals("for") || scannedlineArr[i].equals("while")) {
+
+                        current_max++;
+
+                        if (scannedline.contains("{") && scannedline.contains("}")) {
+
+                            current_max++;
+                            additonal++;
+
+                        }
+
+                        // update max if required  
+                        if (current_max > CncCounter) {
+
+                            CncCounter = current_max;
+
+                        }
+
+                    } else if (scannedlineArr[i].equals("}")) {
+
+                        if (current_max > 0) {
+                            current_max--;
+                            CncCounter = current_max;
+                            current_max = current_max - additonal;
+                            additonal = 0;
+                        }
                     }
                 }
 
                 Cnc.add(CncCounter);
+
             }
+
             //******************************IF uploded source code in C++ language
             if (btnc.isSelected()) {
-                if (scannedline.matches("(\\s+)if(.*)") || scannedline.matches("(\\s+)else(.*)") || scannedline.matches("(\\s+)for(.*)")|| scannedline.matches("(\\s+)while(.*)")) {
-                    current_max++;
-                    System.out.println(scannedline);
-                    // update max if required  
-                    if (current_max > CncCounter) {
-                        CncCounter = current_max;
-                    }
-                } else if (scannedline.contains("}")) {
-                    if (current_max > 0) {
-                        current_max--;
-                        CncCounter = current_max;
+                String[] scannedlineArr = scannedline.split(" ");
+
+                //find cnc
+                for (int i = 0; i < scannedlineArr.length; i++) {
+                    System.out.println(scannedlineArr[i]);
+
+                    if (scannedlineArr[i].equals("if") || scannedlineArr[i].equals("else") || scannedlineArr[i].equals("for") || scannedlineArr[i].equals("while")) {
+
+                        current_max++;
+
+                        if (scannedline.contains("{") && scannedline.contains("}")) {
+
+                            current_max++;
+                            additonal++;
+
+                        }
+
+                        // update max if required  
+                        if (current_max > CncCounter) {
+
+                            CncCounter = current_max;
+
+                        }
+
+                    } else if (scannedlineArr[i].equals("}")) {
+
+                        if (current_max > 0) {
+                            current_max--;
+                            CncCounter = current_max;
+                            current_max = current_max - additonal;
+                            additonal = 0;
+                        }
                     }
                 }
 
@@ -570,21 +890,10 @@ public class UI extends javax.swing.JFrame {
             }
 
         }
+        //System.out.println(additonal);
+        additonal = 0;
         noOfLines.setText("No of Lines : " + lineNumber);
         return Cnc;
-    }
-
-    public ArrayList<String> readFile() {
-        int lineNo = 0;
-        Scanner fileInput = new Scanner(uploadedContent.getText());
-        // Read through file and find words
-        while (fileInput.hasNextLine()) {
-            lineNo = lineNo + 1;
-            String scannedline = fileInput.nextLine();
-            programStatement.add(scannedline);
-            lineNumber.add(lineNo);
-        }
-        return programStatement;
     }
 
     public ArrayList<Integer> calcCs() {
@@ -799,7 +1108,6 @@ public class UI extends javax.swing.JFrame {
     public String FindRecursiveMethod() {
         try {
 
-
             String sourceCode = uploadedContent.getText();
             String[] liness = sourceCode.split("\r\n|\r|\n");
             for (int i = 0; i < liness.length; i++) {
@@ -827,7 +1135,7 @@ public class UI extends javax.swing.JFrame {
 
     public int CalculateCpForNonRecursive() {
         try {
-            ArrayList<Integer> Ci = dumyNonCi();
+            ArrayList<Integer> Ci = inheritanceCi();
             ArrayList<Integer> Cs = calcCs();
             ArrayList<Integer> CtcCal = calculateCtc();
             for (int i = 0; i < CtcCal.size(); i++) {
@@ -859,7 +1167,6 @@ public class UI extends javax.swing.JFrame {
         }
         return 0;
 
-
     }
 
     public int FindRecursiveFirstLine(String mname) {
@@ -877,26 +1184,27 @@ public class UI extends javax.swing.JFrame {
     public int CalculateTotalCpsForRecursive(int firstLine, int LastLine) {
         ArrayList<Integer> CncCal = calculateCnc();
         ArrayList<Integer> CtcCal = calculateCtc();
-        ArrayList<Integer> Ci = dumyCi();
+        ArrayList<Integer> Ci = inheritanceCi();
         ArrayList<Integer> Cs = calcCs();
+        System.out.println("************************");
 
         String sourceCode = uploadedContent.getText();
         String[] liness = sourceCode.split("\r\n|\r|\n");
+        System.out.println("size " + liness.length);
         for (int i = 0; i < liness.length; i++) {
 
             //calculate CPs value for non recursive lines and get total CPs
             int tw = CtcCal.get(i) + CncCal.get(i) + Ci.get(i);
             Tw.add(tw);
-            System.out.println("Tw added");
+            System.out.println("Tw added" + i);
         }
-        ;
+        System.out.println("after tw");
         for (int i = 0; i < liness.length; i++) {
 
             int cps = Tw.get(i) * Cs.get(i);
 
             Cps.add(cps);
             RecursiveCps.add(cps);
-
 
         }
 
@@ -917,7 +1225,7 @@ public class UI extends javax.swing.JFrame {
 
         ArrayList<Integer> CtcCal = calculateCtc();
         ArrayList<Integer> CncCal = calculateCnc();
-        ArrayList<Integer> Ci = dumyCi();
+        ArrayList<Integer> Ci = inheritanceCi();
         ArrayList<Integer> Cs = calcCs();
         ArrayList<Integer> Tw = new ArrayList<Integer>();
         ArrayList<Integer> Cps = new ArrayList<Integer>();
@@ -942,6 +1250,7 @@ public class UI extends javax.swing.JFrame {
 
         for (int i = 0; i < data.length; i++) {
             Ci.add(data[i]);
+
         }
         return Ci;
     }
@@ -997,7 +1306,6 @@ public class UI extends javax.swing.JFrame {
                     System.out.println("Total complexity of the program " + Cp);
                 }
 
-
             }
 
         } catch (Exception e) {
@@ -1009,6 +1317,7 @@ public class UI extends javax.swing.JFrame {
 
         int Testcurrent_max = 0;
         int TestCncCounter = 0;
+        int Testadditonal = 0;
         String contentTestCnc = "public class FibonacciMain {\n"
                 + "public static long fibonacci(long number) {\n"
                 + "        if ((number == 0) || (number == 1)) { // base cases\n"
@@ -1029,48 +1338,45 @@ public class UI extends javax.swing.JFrame {
         Scanner fileInput = new Scanner(contentTestCnc);
         while (fileInput.hasNextLine()) {
             String scannedline = fileInput.nextLine();
-            if (scannedline.matches("(\\s+)if(.*)") || scannedline.matches("(\\s+)else(.*)") || scannedline.matches("(\\s+)for(.*)")) {
-                Testcurrent_max++;
-                if (Testcurrent_max > TestCncCounter) {
-                    TestCncCounter = Testcurrent_max;
-                }
-            } else if (scannedline.contains("}")) {
-                if (Testcurrent_max > 0) {
-                    Testcurrent_max--;
-                    TestCncCounter = Testcurrent_max;
+
+            String[] scannedlineArr = scannedline.split(" ");
+
+            //find cnc
+            for (int i = 0; i < scannedlineArr.length; i++) {
+                System.out.println(scannedlineArr[i]);
+
+                if (scannedlineArr[i].equals("if") || scannedlineArr[i].equals("else") || scannedlineArr[i].equals("for") || scannedlineArr[i].equals("while")) {
+
+                    Testcurrent_max++;
+
+                    if (scannedline.contains("{") && scannedline.contains("}")) {
+
+                        Testcurrent_max++;
+                        Testadditonal++;
+
+                    }
+
+                    // update max if required  
+                    if (Testcurrent_max > TestCncCounter) {
+
+                        TestCncCounter = Testcurrent_max;
+
+                    }
+
+                } else if (scannedlineArr[i].equals("}")) {
+
+                    if (Testcurrent_max > 0) {
+                        Testcurrent_max--;
+                        TestCncCounter = Testcurrent_max;
+                        Testcurrent_max = Testcurrent_max - Testadditonal;
+                        Testadditonal = 0;
+                    }
                 }
             }
+
             ArrCnc.add(TestCncCounter);
         }
         return ArrCnc;
-    }
-
-    public void viewResult() {
-        readFile();
-        DefaultTableModel model = (DefaultTableModel) result.getModel();
-        Object[] CtcObjs = Ctc.toArray();
-        Object[] CncObjs = Cnc.toArray();
-        Object[] programStatementObjs = programStatement.toArray();
-        Object[] lineNumberObjs = lineNumber.toArray();
-        Object[] lineComplexityObjs = lineComplexity.toArray();
-        Object[] TwObjs = Tw.toArray();
-        Object[] CpsObjs = Cps.toArray();
-        Object[] CrObjs = Cr.toArray();
-        Object[] CiObjs = Ci.toArray();
-
-        model.addColumn("Line No", lineNumberObjs);
-        model.addColumn("Program Statements", programStatementObjs);
-        model.addColumn("Cs", lineComplexityObjs);
-        model.addColumn("Ctc", CtcObjs);
-        model.addColumn("Cnc", CncObjs);
-        model.addColumn("Ci", CiObjs);
-        model.addColumn("Tw", TwObjs);
-        model.addColumn("Cps", CpsObjs);
-        if (recursion == 1) {
-            System.out.println("recursion is " + recursion);
-            model.addColumn("Cr", CrObjs);
-        }
-
     }
 
     @SuppressWarnings("unchecked")
@@ -1107,6 +1413,13 @@ public class UI extends javax.swing.JFrame {
         btnClear = new javax.swing.JRadioButton();
         jLabel6 = new javax.swing.JLabel();
         CpValue = new javax.swing.JTextField();
+        btnCtcReport = new javax.swing.JButton();
+        btnCncReport = new javax.swing.JButton();
+        btnCsReport = new javax.swing.JButton();
+        btnCiReport = new javax.swing.JButton();
+        btnTWReport = new javax.swing.JButton();
+        btnCrReport = new javax.swing.JButton();
+        jLabel7 = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenu2 = new javax.swing.JMenu();
@@ -1121,7 +1434,7 @@ public class UI extends javax.swing.JFrame {
 
         jPanel1.setBackground(new java.awt.Color(204, 255, 255));
 
-        btnAttchFile.setBackground(new java.awt.Color(255, 255, 0));
+        btnAttchFile.setBackground(new java.awt.Color(255, 204, 51));
         btnAttchFile.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         btnAttchFile.setText("Attach File");
         btnAttchFile.setBorder(null);
@@ -1163,9 +1476,8 @@ public class UI extends javax.swing.JFrame {
 
         noOfLines.setEditable(false);
 
-        btnReset.setBackground(new java.awt.Color(102, 102, 102));
+        btnReset.setBackground(new java.awt.Color(153, 153, 153));
         btnReset.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
-        btnReset.setForeground(new java.awt.Color(255, 255, 255));
         btnReset.setText("RESET");
         btnReset.setBorder(null);
         btnReset.addActionListener(new java.awt.event.ActionListener() {
@@ -1176,7 +1488,6 @@ public class UI extends javax.swing.JFrame {
 
         testArrayList.setBackground(new java.awt.Color(0, 204, 51));
         testArrayList.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
-        testArrayList.setForeground(new java.awt.Color(255, 255, 255));
         testArrayList.setText("Display Output");
         testArrayList.setBorder(null);
         testArrayList.addActionListener(new java.awt.event.ActionListener() {
@@ -1297,6 +1608,75 @@ public class UI extends javax.swing.JFrame {
             }
         });
 
+        btnCtcReport.setBackground(new java.awt.Color(255, 51, 51));
+        btnCtcReport.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        btnCtcReport.setForeground(new java.awt.Color(255, 255, 255));
+        btnCtcReport.setText("Ctc Statistics");
+        btnCtcReport.setBorder(null);
+        btnCtcReport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCtcReportActionPerformed(evt);
+            }
+        });
+
+        btnCncReport.setBackground(new java.awt.Color(255, 51, 51));
+        btnCncReport.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        btnCncReport.setForeground(new java.awt.Color(255, 255, 255));
+        btnCncReport.setText("Cnc Statistics");
+        btnCncReport.setBorder(null);
+        btnCncReport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCncReportActionPerformed(evt);
+            }
+        });
+
+        btnCsReport.setBackground(new java.awt.Color(255, 51, 51));
+        btnCsReport.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        btnCsReport.setForeground(new java.awt.Color(255, 255, 255));
+        btnCsReport.setText("Cs Statistics");
+        btnCsReport.setBorder(null);
+        btnCsReport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCsReportActionPerformed(evt);
+            }
+        });
+
+        btnCiReport.setBackground(new java.awt.Color(255, 51, 51));
+        btnCiReport.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        btnCiReport.setForeground(new java.awt.Color(255, 255, 255));
+        btnCiReport.setText("Ci Statistics");
+        btnCiReport.setBorder(null);
+        btnCiReport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCiReportActionPerformed(evt);
+            }
+        });
+
+        btnTWReport.setBackground(new java.awt.Color(255, 51, 51));
+        btnTWReport.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        btnTWReport.setForeground(new java.awt.Color(255, 255, 255));
+        btnTWReport.setText("TW Statistics");
+        btnTWReport.setBorder(null);
+        btnTWReport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnTWReportActionPerformed(evt);
+            }
+        });
+
+        btnCrReport.setBackground(new java.awt.Color(255, 51, 51));
+        btnCrReport.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        btnCrReport.setForeground(new java.awt.Color(255, 255, 255));
+        btnCrReport.setText("Cr Statistics");
+        btnCrReport.setBorder(null);
+        btnCrReport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCrReportActionPerformed(evt);
+            }
+        });
+
+        jLabel7.setFont(new java.awt.Font("Georgia", 3, 18)); // NOI18N
+        jLabel7.setText("Generate Charts");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -1334,8 +1714,23 @@ public class UI extends javax.swing.JFrame {
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addComponent(testArrayList, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(btnReset, javax.swing.GroupLayout.PREFERRED_SIZE, 51, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                                .addGap(0, 238, Short.MAX_VALUE))
+                                                .addComponent(btnReset, javax.swing.GroupLayout.PREFERRED_SIZE, 51, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                                .addGap(113, 113, 113)
+                                                .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(btnCtcReport)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                .addComponent(btnCncReport)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(btnCsReport, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(btnCiReport, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnTWReport, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnCrReport, javax.swing.GroupLayout.PREFERRED_SIZE, 83, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 147, Short.MAX_VALUE))
                             .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
                                 .addComponent(logo)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -1374,10 +1769,19 @@ public class UI extends javax.swing.JFrame {
                     .addComponent(btnReset, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(jLabel1)
-                        .addComponent(noOfLines, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(btnClear))
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel1)
+                            .addComponent(noOfLines, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(btnClear, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(btnCncReport, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(btnCsReport)
+                            .addComponent(btnCiReport)
+                            .addComponent(btnTWReport)
+                            .addComponent(btnCrReport)
+                            .addComponent(jLabel7)))
+                    .addComponent(btnCtcReport, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 201, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -1388,7 +1792,7 @@ public class UI extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel6)
                     .addComponent(CpValue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(17, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jMenu1.setText("File");
@@ -1452,18 +1856,20 @@ public class UI extends javax.swing.JFrame {
 
     private void btnResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnResetActionPerformed
 
-        path.setText(null);
-        noOfLines.setText(null);
-        uploadedContent.setText(null);
-        DefaultTableModel ClearModel = (DefaultTableModel) result.getModel();
-        ClearModel.setRowCount(0);
-        btnClear.setSelected(true);
-        Cps.clear();
-        RecursiveCps.clear();
-        Tw.clear();
-        Cr.clear();
+//        path.setText(null);
+//        noOfLines.setText(null);
+//        uploadedContent.setText(null);
+//        DefaultTableModel ClearModel = (DefaultTableModel) result.getModel();
+//        ClearModel.setRowCount(0);
+//        btnClear.setSelected(true);
+//        Cps.clear();
+//        RecursiveCps.clear();
+//        Tw.clear();
+//        Cr.clear();
 
-
+this.dispose();
+UI ui = new UI();
+ui.setVisible(true);
         /*
          calcCnc();
          for (int i = 0; i < ArrCnc.size(); i++) {
@@ -1485,6 +1891,7 @@ public class UI extends javax.swing.JFrame {
 
     private void btnCiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCiActionPerformed
         // TODO add your handling code here:
+        inheritanceCi();
     }//GEN-LAST:event_btnCiActionPerformed
 
     private void btnCi3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCi3ActionPerformed
@@ -1495,6 +1902,30 @@ public class UI extends javax.swing.JFrame {
     private void CpValueActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CpValueActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_CpValueActionPerformed
+
+    private void btnCtcReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCtcReportActionPerformed
+        generateCtcChart();
+    }//GEN-LAST:event_btnCtcReportActionPerformed
+
+    private void btnCncReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCncReportActionPerformed
+        generateCncChart();
+    }//GEN-LAST:event_btnCncReportActionPerformed
+
+    private void btnCsReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCsReportActionPerformed
+        generateCsChart();
+    }//GEN-LAST:event_btnCsReportActionPerformed
+
+    private void btnCiReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCiReportActionPerformed
+        generateCiChart();
+    }//GEN-LAST:event_btnCiReportActionPerformed
+
+    private void btnTWReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnTWReportActionPerformed
+        generateTwChart();
+    }//GEN-LAST:event_btnTWReportActionPerformed
+
+    private void btnCrReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCrReportActionPerformed
+        generateCrChart();
+    }//GEN-LAST:event_btnCrReportActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1539,11 +1970,17 @@ public class UI extends javax.swing.JFrame {
     private javax.swing.JButton btnAttchFile;
     private javax.swing.JButton btnCi;
     private javax.swing.JButton btnCi3;
+    private javax.swing.JButton btnCiReport;
     private javax.swing.JRadioButton btnClear;
     private javax.swing.JButton btnCnc;
+    private javax.swing.JButton btnCncReport;
+    private javax.swing.JButton btnCrReport;
     private javax.swing.JButton btnCs;
+    private javax.swing.JButton btnCsReport;
     private javax.swing.JButton btnCtc;
+    private javax.swing.JButton btnCtcReport;
     private javax.swing.JButton btnReset;
+    private javax.swing.JButton btnTWReport;
     private javax.swing.JRadioButton btnc;
     private javax.swing.JRadioButton btnjava;
     private javax.swing.JLabel jLabel1;
@@ -1552,6 +1989,7 @@ public class UI extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenu jMenu3;
